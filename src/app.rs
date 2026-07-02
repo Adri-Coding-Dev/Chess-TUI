@@ -1,6 +1,5 @@
 use ratatui::{
     Frame,
-    layout::Rect,
 };
 use crate::config::Config;
 use crate::engine::game::Game;
@@ -8,6 +7,7 @@ use crate::engine::board::{GameStatus, Color};
 use crate::events::Event;
 use crate::states::UiState;
 use crate::ui::{layout, board_renderer, widgets, theme};
+use crate::ui::layout::BoardLayout;
 use crate::utils::time::ChessClock;
 use crate::storage::history::HistoryEntry;
 use std::time::Duration;
@@ -22,8 +22,8 @@ pub struct App {
     pub game_result: Option<String>,
     quit: bool,
     pub history: Vec<HistoryEntry>,
-    last_board_rect: Option<Rect>,
-    last_left_rect: Option<Rect>,
+    last_board: Option<BoardLayout>,
+    last_left_rect: Option<ratatui::layout::Rect>,
 }
 
 impl App {
@@ -41,7 +41,7 @@ impl App {
             game_result: None,
             quit: false,
             history,
-            last_board_rect: None,
+            last_board: None,
             last_left_rect: None,
         }
     }
@@ -76,18 +76,17 @@ impl App {
             return;
         }
         let (col, row) = (mouse.column, mouse.row);
-        // Clone the Rect to avoid borrow conflict
-        let board_area = self.last_board_rect;
-        if let Some(area) = board_area {
-            if area.contains((col, row).into()) {
-                self.handle_board_click(col, row, &area);
+        let board = self.last_board;
+        if let Some(board) = board {
+            if board.rect.contains((col, row).into()) {
+                self.handle_board_click(col, row, &board);
                 return;
             }
         }
     }
 
-    fn handle_board_click(&mut self, col: u16, row: u16, board_area: &Rect) {
-        let square = crate::ui::mouse::pixel_to_square(col, row, board_area);
+    fn handle_board_click(&mut self, col: u16, row: u16, board: &BoardLayout) {
+        let square = crate::ui::mouse::pixel_to_square(col, row, board);
         if square.is_none() {
             return;
         }
@@ -159,11 +158,11 @@ impl App {
     pub fn render(&mut self, f: &mut Frame) {
         let theme = theme::tokio_night_theme();
         let chunks = layout::create_layout(f.size(), &theme);
-        self.last_board_rect = Some(chunks.board);
+        self.last_board = Some(chunks.board);
         self.last_left_rect = Some(chunks.left);
 
         widgets::render_left_panel(f, chunks.left, &self.history, &self.config, &theme);
-        board_renderer::render_board(f, chunks.board, &self.game, &self.ui_state, &theme);
+        board_renderer::render_board(f, &chunks.board, &self.game, &self.ui_state, &theme);
         widgets::render_right_panel(f, chunks.right, &self.game, &self.clock, &self.move_history, &self.config, &theme);
     }
 

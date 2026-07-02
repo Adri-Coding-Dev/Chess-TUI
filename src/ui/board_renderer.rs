@@ -2,17 +2,17 @@ use ratatui::{
     Frame,
     layout::Rect,
     style::Style,
-    text::Span,
+    text::{Span, Line},
     widgets::Paragraph,
 };
 use crate::engine::game::Game;
 use crate::engine::board::{Piece, Color as PieceColor};
 use crate::states::UiState;
 use super::theme::Theme;
+use super::layout::BoardLayout;
 
-pub fn render_board(frame: &mut Frame, area: Rect, game: &Game, ui_state: &UiState, theme: &Theme) {
-    let cell_width = area.width / 8;
-    let cell_height = area.height / 8;
+pub fn render_board(frame: &mut Frame, board_layout: &BoardLayout, game: &Game, ui_state: &UiState, theme: &Theme) {
+    let BoardLayout { rect, cell_width, cell_height } = *board_layout;
     if cell_width == 0 || cell_height == 0 {
         return;
     }
@@ -36,22 +36,38 @@ pub fn render_board(frame: &mut Frame, area: Rect, game: &Game, ui_state: &UiSta
                 }
             }
 
-            let piece_str = if let Some((color, piece)) = piece_info {
-                piece_to_unicode(color, piece)
+            let piece_str = piece_info.map(|(c, p)| piece_to_unicode(c, p)).unwrap_or(' ');
+            let cell_x = rect.x + file as u16 * cell_width;
+            let cell_y = rect.y + rank as u16 * cell_height;
+
+            let empty_line = " ".repeat(cell_width as usize);
+            let piece_line = if cell_width > 0 {
+                let padding = (cell_width as usize - 1) / 2;
+                format!(
+                    "{:>pad$}{}{:pad$}",
+                    "", piece_str, "",
+                    pad = padding
+                )
             } else {
-                ' '
+                piece_str.to_string()
             };
 
+            let lines: Vec<Line> = (0..cell_height).map(|i| {
+                let content = if i == cell_height / 2 {
+                    piece_line.clone()
+                } else {
+                    empty_line.clone()
+                };
+                Line::from(Span::styled(content, Style::default().fg(theme.text).bg(bg)))
+            }).collect();
+
             let cell_area = Rect {
-                x: area.x + file as u16 * cell_width,
-                y: area.y + rank as u16 * cell_height,
+                x: cell_x,
+                y: cell_y,
                 width: cell_width,
                 height: cell_height,
             };
-
-            let text = format!("{:^width$}", piece_str, width = cell_width as usize);
-            let span = Span::styled(text, Style::default().fg(theme.text).bg(bg));
-            frame.render_widget(Paragraph::new(span), cell_area);
+            frame.render_widget(Paragraph::new(lines), cell_area);
         }
     }
 }

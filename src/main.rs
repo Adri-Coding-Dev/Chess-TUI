@@ -12,7 +12,7 @@ mod utils;
 use std::io;
 use std::time::Duration;
 use crossterm::{
-    event::{self, Event as CrosstermEvent},
+    event::{self, Event as CrosstermEvent, EnableMouseCapture, DisableMouseCapture},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -27,7 +27,7 @@ use config::Config;
 fn main() -> AppResult<()> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen)?;
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
@@ -38,7 +38,11 @@ fn main() -> AppResult<()> {
     let res = run_app(&mut terminal, &mut app, tick_rate);
 
     disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture
+    )?;
     terminal.show_cursor()?;
 
     app.config.save().ok();
