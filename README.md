@@ -169,9 +169,10 @@ Implementado completamente en `engine/` y sin dependencias de la UI.
 
 ```bash
 cargo run
+```
 
 La aplicación se inicia en modo raw, con pantalla alternada y soporte de ratón. Al salir (Esc) se restaura la terminal.
-🔮 Próximos pasos
+### 🔮 Próximos pasos
 
     Implementar niveles de IA superiores (minimax, alpha-beta, transposición).
 
